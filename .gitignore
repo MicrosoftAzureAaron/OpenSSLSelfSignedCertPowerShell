@@ -1,1 +1,8 @@
-makeSS.ps1
+SelfSignedLeaf.crt
+SelfSignedLeaf.csr
+SelfSignedLeaf.key
+SelfSignedLeaf.pfx
+SelfSignedRoot.cer
+SelfSignedRoot.crt
+SelfSignedRoot.key
+SelfSignedRoot.srl
