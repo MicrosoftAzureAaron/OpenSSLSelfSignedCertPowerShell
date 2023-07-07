@@ -1,0 +1,1 @@
+run this to install openssl lite for win 64 bit and create a self signed root CA, root key, site cert, site key, and then a PFX as well as a .cer for the root certificate
