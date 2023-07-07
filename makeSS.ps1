@@ -16,7 +16,7 @@ $certDays = 366
 #$LeafCertPassword = $RootCertPassword = "1234"
 
 # Create Root Certificate and Root Key
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -node-keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout 
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
 
 #No SAN for self signed 
 $san = "subjectAltName = DNS:"+$certName+",DNS:*"+$certname
