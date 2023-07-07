@@ -32,4 +32,5 @@ openssl pkcs12 -export -out SelfSignedLeaf.pfx -inkey SelfSignedLeaf.key -in Sel
 #view the pfx
 openssl pkcs12 -in .\SelfSignedLeaf.pfx -nodes 
 
+#create .cer from .crt root certificate 
 Copy-Item -path .\SelfSignedRoot.crt -Destination .\SelfSignedRoot.cer
