@@ -8,19 +8,26 @@ if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
 
 # Ask user for parameters
 $certName = Read-Host "Enter Site/Leaf/Server certificate name, example.com"
-$RootCertPassword = Read-Host "Enter Root Private Key password" -AsSecureString
-$LeafCertPassword = Read-Host "Enter Leaf Private Key password" -AsSecureString
+$RootCertPassword = Read-Host "Enter Root Private Key password"
+$RootCertPassword = "pass:" + $RootCertPassword
+$LeafCertPassword = Read-Host "Enter Leaf Private Key password"
+$LeafCertPassword = "pass:" + $LeafCertPassword
 $certDays = 366
 #$LeafCertPassword = $RootCertPassword = "1234"
 
 # Create Root Certificate and Root Key
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout pass:$RootCertPassword
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -node-keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout 
 
-$txt = "subjectAltName = DNS:"+$certName+",DNS:*"+$certname
+#No SAN for self signed 
+$san = "subjectAltName = DNS:"+$certName+",DNS:*"+$certname
 $cn = "/CN="+$certName
+
 # Create the leaf certifite and key
-openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $txt -passout pass:$LeafCertPassword
-openssl x509 -req -in SelfSignedLeaf.csr -CA SelfSignedRoot.crt -CAkey SelfSignedRoot.key -CAcreateserial -out SelfSignedLeaf.crt -days $certDays -passin pass:$RootCertPassword
+openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
+openssl x509 -req -in SelfSignedLeaf.csr -CA SelfSignedRoot.crt -CAkey SelfSignedRoot.key -CAcreateserial -out SelfSignedLeaf.crt -days $certDays -passin $RootCertPassword
 
 # Export server certificate and key
-openssl pkcs12 -export -out SelfSignedLeaf.pfx -inkey SelfSignedLeaf.key -in SelfSignedLeaf.crt -certfile SelfSignedRoot.crt -passout pass:$LeafCertPassword -passin pass:$LeafCertPassword
+openssl pkcs12 -export -out SelfSignedLeaf.pfx -inkey SelfSignedLeaf.key -in SelfSignedLeaf.crt -certfile SelfSignedRoot.crt -passout $LeafCertPassword -passin $LeafCertPassword
+
+#view the pfx
+openssl pkcs12 -in .\SelfSignedLeaf.pfx -nodes 
