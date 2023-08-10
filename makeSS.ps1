@@ -1,7 +1,7 @@
 # Check if OpenSSL is installed
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     # Download and install OpenSSL
-    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_1.exe" -OutFile "C:\OpenSSL.exe"
+    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\OpenSSL.exe"
     Start-Process -FilePath "C:\OpenSSL.exe" -ArgumentList "/SILENT" -Wait
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
