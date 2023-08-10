@@ -17,6 +17,7 @@ $certDays = 366
 
 # Create Root Certificate and Root Key
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
+#openssl req -x509 -newkey rsa:2048 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
 
 #No SAN for self signed 
 $san = "subjectAltName = DNS:"+$certName+",DNS:*"+$certname
@@ -24,6 +25,7 @@ $cn = "/CN="+$certName
 
 # Create the leaf certifite and key
 openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
+#openssl req -new -newkey rsa:2048 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
 openssl x509 -req -in SelfSignedLeaf.csr -CA SelfSignedRoot.crt -CAkey SelfSignedRoot.key -CAcreateserial -out SelfSignedLeaf.crt -days $certDays -passin $RootCertPassword
 
 # Export server certificate and key
