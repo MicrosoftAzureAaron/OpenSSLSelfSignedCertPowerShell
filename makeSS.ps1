@@ -11,8 +11,8 @@ if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
 
 ############# create certificate
 function CreateCerts {
-    $CN = Read-Host "Enter Root certificate name, [Root.com]"
-    if($CN -match "^\s*$") {$CN = "Root.com"}
+    $CommonName = Read-Host "Enter Root certificate name, [Root.com]"
+    if($CommonName -match "^\s*$") {$CommonName = "Root.com"}
 
     $countryName = Read-Host "Enter the Country, [US]"
     if($countryName -match "^\s*$") {$countryName = "US" }
@@ -26,14 +26,12 @@ function CreateCerts {
     $RootCertPassword = Read-Host "Enter Root Private Key password"
     $RootCertPassword = "pass:" + $RootCertPassword
 
-    $LeafCertPassword = Read-Host "Enter Leaf Private Key password"
-    $LeafCertPassword = "pass:" + $LeafCertPassword
-
-    #$CertDays = Read-Host "Enter days the certificate is valid for [365]"
+    $CertDays = Read-Host "Enter days the certificate is valid for [365]"
+    if($CertDays -match "^\s*$") {$CertDays = 365}
 
     #create Root.cnf
     $FN = "Root.cnf"
-    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FN
+    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CommonName -FN $FN
 
     #creates Root.key private certificate (private key)
     openssl ecparam -out Root.key -name prime256v1 -genkey
@@ -42,25 +40,39 @@ function CreateCerts {
     openssl req -new -sha256 -key Root.key -out Root.csr -config Root.cnf
 
     #creates Root.cer certificate from Root.csr, Root.key, Root.cnf
-    openssl x509 -req -sha256 -days 365 -in Root.csr -signkey Root.key -out Root.cer -extfile $FN -extensions v3_ca -passin $RootCertPassword
+    openssl x509 -req -sha256 -days $CertDays -in Root.csr -signkey Root.key -out Root.cer -extfile $FN -extensions v3_ca -passin $RootCertPassword
 
     #create Leaf.key private certificate (private key)
     openssl ecparam -out Leaf.key -name prime256v1 -genkey
-    $CN = ""
-    $CN = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
-    if($CN -match "^\s*$") {$CN = "Leaf.com" }
+    $CommonName = ""
+    $CommonName = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
+    if($CommonName -match "^\s*$") {$CommonName = "Leaf.com" }
+
+    $LeafCertPassword = Read-Host "Enter Leaf Private Key password"
+    $LeafCertPassword = "pass:" + $LeafCertPassword
 
     #create Leaf.cnf
     $FN = "Leaf.cnf"
-    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FN
+    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CommonName -FN $FN
 
     #create v3.txt\
     $SAN = Read-Host "Enter the SANs for the certificate, [*Leaf.com,*.Leaf.com,www.Leaf.com]"
-    if($SAN -match "^\s*$") {$SAN = "*Leaf.com,*.Leaf.com,www.Leaf.com" }
+    if($SAN -match "^\s*$") {$SAN = "*"+$CommonName }
     
-    #add 'DNS:' to the list
-    $SAN = ($SAN -split ',') -join ',DNS:'
+    # Split the string into an array using commas as the delimiter
+    $elements = $SAN -split ','
 
+    # Check if there are more than one element and the string doesn't end with a comma
+    if ($elements.Count -gt 1 -and $SAN -notlike '*,') {
+        Write-Host "SAN = Comman Name" $SAN
+        #add 'DNS:' to the list
+        $SAN = ($SAN -split ',') -join ',DNS:'
+        $SAN = 'DNS:' + $SAN  # Add 'DNS:' to the beginning
+        Write-Host $SAN
+    } else {
+        Write-Host $SAN 
+    }    
+    #create the V3 extenstion file with SANS
     CreateV3 -s1 $SAN
 
     #create Leaf.csr certificate signing request (CSR) with the Leaf.key private certificate
@@ -71,7 +83,7 @@ function CreateCerts {
     openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile $FN -passin $LeafCertPassword
 
     #export the Leaf as a PFX with the Key and bundled Root.cer and Leaf.cer
-    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer
+    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer -passin $LeafCertPassword
 }
 
 
@@ -94,10 +106,12 @@ function CreateCNF {
     $modifiedContent = $modifiedContent -replace "s2", $s2
     $modifiedContent = $modifiedContent -replace "s3", $s3
     $modifiedContent = $modifiedContent -replace "s4", $s4
-    #write-host "filepath "$filepath
-    #write-host "filename "$FN
+    #Write-Host "filepath "$filepath
+    #Write-Host "filename "$FN
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath $FN
-    $modifiedContent | Set-Content -Path $filePath
+    $modifiedContent | Set-Content -Path $filePath+
+
+    #remove lines 3 and 4 from the template for the leaf CNF
     if ($FN -eq "Leaf.cnf") {
         $lines = Get-Content -Path $filePath
 
@@ -117,7 +131,7 @@ function CreateV3 {
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath "v3.txt"
 
     # Content to be written to the file
-    $content = "subjectAltName = DNS:"+$s1
+    $content = "subjectAltName = "+$s1
     $content | Set-Content -Path $filePath
 
     #add the last line
@@ -126,7 +140,7 @@ function CreateV3 {
 
 #menu here
 function Show-Menu {
-	#Clear-Host
+	Clear-Host
 	Write-Host "================ Self Signed Certificate ================"
 	Write-Host "1: Press '1' Create Certificate "
 	Write-Host "2: Press '2' View Local PFX"
