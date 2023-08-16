@@ -31,7 +31,7 @@ function CreateCerts {
 
     #$CertDays = Read-Host "Enter days the certificate is valid for [365]"
 
-    #create root.cnf
+    #create Root.cnf
     $FN = "Root.cnf"
     CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FN
 
@@ -42,19 +42,25 @@ function CreateCerts {
     openssl req -new -sha256 -key Root.key -out Root.csr -config Root.cnf
 
     #creates Root.cer certificate from Root.csr, Root.key, Root.cnf
-    openssl x509 -req -sha256 -days 365 -in Root.csr -signkey Root.key -out Root.cer -extfile $FN -extensions v3_ca
-    Pause
+    openssl x509 -req -sha256 -days 365 -in Root.csr -signkey Root.key -out Root.cer -extfile $FN -extensions v3_ca -passin $RootCertPassword
 
     #create Leaf.key private certificate (private key)
     openssl ecparam -out Leaf.key -name prime256v1 -genkey
+    $CN = ""
+    $CN = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
+    if($CN -match "^\s*$") {$CN = "Leaf.com" }
 
-    $CN = Read-Host "Enter Site/Leaf/Server certificate name, leaf.com"
-    #create leaf.cnf
+    #create Leaf.cnf
     $FN = "Leaf.cnf"
     CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FN
 
     #create v3.txt\
-    $SAN = Read-Host "Enter the SANs for the certificate, [bing.com,*bing.com,www.bing.com]"
+    $SAN = Read-Host "Enter the SANs for the certificate, [*Leaf.com,*.Leaf.com,www.Leaf.com]"
+    if($SAN -match "^\s*$") {$SAN = "*Leaf.com,*.Leaf.com,www.Leaf.com" }
+    
+    #add 'DNS:' to the list
+    $SAN = ($SAN -split ',') -join ',DNS:'
+
     CreateV3 -s1 $SAN
 
     #create Leaf.csr certificate signing request (CSR) with the Leaf.key private certificate
@@ -62,7 +68,7 @@ function CreateCerts {
 
     #create Leaf.cer certificate from Root.cer Root.key, and create a .srl file (serial file)
     $FN = "v3.txt"
-    openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile $FN
+    openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile $FN -passin $LeafCertPassword
 
     #export the Leaf as a PFX with the Key and bundled Root.cer and Leaf.cer
     openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer
