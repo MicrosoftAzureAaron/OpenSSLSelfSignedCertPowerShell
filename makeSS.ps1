@@ -1,3 +1,7 @@
+#todo
+#add conf file for SANs in selfsigned cert
+#add menu system 
+
 # Check if OpenSSL is installed
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     # Download and install OpenSSL
