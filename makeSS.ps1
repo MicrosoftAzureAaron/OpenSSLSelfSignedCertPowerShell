@@ -89,6 +89,7 @@ function CreateCerts {
 
 ############# modify the CNF files
 function CreateCNF {
+    CreateCNFTemplate
     param (
         [string]$s1,
         [string]$s2,
@@ -136,6 +137,16 @@ function CreateV3 {
 
     #add the last line
     Add-Content -Path $filePath -Value "extendedKeyUsage = serverAuth, clientAuth"
+}
+
+function CreateCNFTemplate {
+     # Specify the file path
+     $filePath = Join-Path -Path $PSScriptRoot -ChildPath "cnftemplate.cnf"
+     if (Test-Path $filePath -PathType Leaf) {
+        Write-Host "The CNF template file exists."
+    } else { #manually create template
+        Add-Content -Path $filePath -Value "[ req ] `ndistinguished_name = req_distinguished_name `nextensions = v3_ca `nreq_extensions = v3_ca `nprompt = no `n[ v3_ca ] `nbasicConstraints = CA:TRUE `n[ req_distinguished_name ] `ncountryName = s1 `nstateOrProvinceName = s2 `norganizationName = s3 `ncommonName = s4"
+    }
 }
 
 #menu here
