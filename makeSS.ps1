@@ -63,8 +63,8 @@ function CreateCerts {
     CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CommonName -FN $FN
 
     #create v3.txt\
-    $SAN = Read-Host "Enter the SANs for the certificate, [*Leaf.com,*.Leaf.com,www.Leaf.com]"
-    if($SAN -match "^\s*$") {$SAN = 'Leaf.com,*Leaf.com,www.Leaf.com' } #could ignore SANs if not entered
+    $SAN = Read-Host "Enter the SANs for the certificate, []"
+    if($SAN -match "^\s*$") {} #could ignore SANs if not entered
     
     # Split the string into an array using commas as the delimiter
     $elements = $SAN -split ','
@@ -75,25 +75,19 @@ function CreateCerts {
         #add 'DNS:' to the list
         $SAN = ($SAN -split ',') -join ',DNS:'
         $SAN = 'DNS:' + $SAN  # Add 'DNS:' to the beginning
-        Write-Host $SAN
+        #Write-Host $SAN
     } else {
-        $SAN = 'DNS:' + $SAN
-        Write-Host $SAN 
-    }
-    
-    # Convert the comma-separated string to an array
-    $elements = $SAN -split ','
-    
-    # Check if the desired string is in the array
-    if ($elements -notcontains $CommonName) {
-        # Add the desired string to the beginning of the array
-        $elements = @("DNS:" + $CommonName) + $array
+        # Check if the desired string is in the array
+        if ($elements -notcontains $CommonName) {
+            # Add the desired string to the beginning of the array
+            $elements = @("DNS:" + $CommonName)
+        }
     }
     
     # Convert the array back to a comma-separated string
-    $elements = $array -join ','
+    $SAN = $elements -join ','
     
-    Write-Host "Had to add the common name to the SAN list" $elements
+    Write-Host "Had to add the common name to the SAN list" $SAN
 
     #create the V3 extenstion file with SANS
     CreateV3 -s1 $SAN
