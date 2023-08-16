@@ -64,7 +64,7 @@ function CreateCerts {
 
     #create v3.txt\
     $SAN = Read-Host "Enter the SANs for the certificate, [*Leaf.com,*.Leaf.com,www.Leaf.com]"
-    if($SAN -match "^\s*$") {$SAN = "*"+$CommonName }
+    if($SAN -match "^\s*$") {$SAN = 'Leaf.com,*Leaf.com,www.Leaf.com' } #could ignore SANs if not entered
     
     # Split the string into an array using commas as the delimiter
     $elements = $SAN -split ','
@@ -77,8 +77,24 @@ function CreateCerts {
         $SAN = 'DNS:' + $SAN  # Add 'DNS:' to the beginning
         Write-Host $SAN
     } else {
+        $SAN = 'DNS:' + $SAN
         Write-Host $SAN 
-    }    
+    }
+    
+    # Convert the comma-separated string to an array
+    $elements = $SAN -split ','
+    
+    # Check if the desired string is in the array
+    if ($elements -notcontains $CommonName) {
+        # Add the desired string to the beginning of the array
+        $elements = @("DNS:" + $CommonName) + $array
+    }
+    
+    # Convert the array back to a comma-separated string
+    $elements = $array -join ','
+    
+    Write-Host "Had to add the common name to the SAN list" $elements
+
     #create the V3 extenstion file with SANS
     CreateV3 -s1 $SAN
 
@@ -90,7 +106,7 @@ function CreateCerts {
     openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile $FN -passin $LeafCertPassword
 
     #export the Leaf as a PFX with the Key and bundled Root.cer and Leaf.cer
-    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer -passin $LeafCertPassword
+    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer
 }
 
 ############# modify the CNF files
@@ -116,7 +132,7 @@ function CreateCNF {
     #Write-Host "filepath "$filepath
     #Write-Host "filename "$FN
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath $FN
-    $modifiedContent | Set-Content -Path $filePath+
+    $modifiedContent | Set-Content -Path $filePath
 
     #remove lines 3 and 4 from the template for the leaf CNF
     if ($FN -eq "Leaf.cnf") {
@@ -148,7 +164,7 @@ function CreateV3 {
 
 #menu here
 function Show-Menu {
-	Clear-Host
+	#Clear-Host
 	Write-Host "================ Self Signed Certificate ================"
 	Write-Host "1: Press '1' Create Certificate "
 	Write-Host "2: Press '2' View Local PFX"
