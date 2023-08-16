@@ -158,7 +158,7 @@ function CreateV3 {
 
 #menu here
 function Show-Menu {
-	#Clear-Host
+	Clear-Host
 	Write-Host "================ Self Signed Certificate ================"
 	Write-Host "1: Press '1' Create Certificate "
 	Write-Host "2: Press '2' View Local PFX"
