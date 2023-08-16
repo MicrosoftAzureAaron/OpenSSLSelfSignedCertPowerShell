@@ -6,11 +6,11 @@ if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 
-############# Ask user for parameters
 #todo:
 # add variable checking
 
-function Get-Parameters {
+############# create certificate
+function CreateCerts {
     $CN = Read-Host "Enter Root certificate name, [Root.com]"
     
     $countryName = Read-Host "Enter the Country, [US]"
@@ -33,20 +33,13 @@ function Get-Parameters {
 
     $CN = Read-Host "Enter Site/Leaf/Server certificate name, leaf.com"
     #create leaf.cnf
-    $FileName = "leaf.cnf"
+    $FileName = "Leaf.cnf"
     CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FileName
 
     #create v3.txt\
     $SAN = Read-Host "Enter the SANs for the certificate, [bing.com,*bing.com,www.bing.com]"
     CreateV3 -s1 $SAN
-    CreateCerts -CD $CertDays
-}
 
-############# create certificate
-function CreateCerts {
-    param (
-        [int]$CD
-    )
     #creates Root.key private certificate (private key)
     openssl ecparam -out Root.key -name prime256v1 -genkey
 
@@ -55,6 +48,7 @@ function CreateCerts {
 
     #creates Root.cer certificate from Root.csr, Root.key, Root.cnf
     openssl x509 -req -sha256 -days $CD -extfile Root.cnf -extensions v3_ca -in Root.csr -signkey Root.key -out Root.cer
+    Pause
 
     #create Leaf.key private certificate (private key)
     openssl ecparam -out Leaf.key -name prime256v1 -genkey
@@ -63,7 +57,8 @@ function CreateCerts {
     openssl req -new -sha256 -key Leaf.key -out Leaf.csr -config Leaf.cnf
 
     #create Leaf.cer certificate from Root.cer Root.key, and create a .srl file (serial file)
-    openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile v3.txt
+    $FN = "v3.txt"
+    openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile $FN
 
     #export the Leaf as a PFX with the Key and bundled Root.cer and Leaf.cer
     openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer
@@ -132,13 +127,13 @@ do {
     switch ($S) {
 		'1' {
             #get the user input
-            Get-Parameters
             CreateCerts
             Show-Menu
 		}
 		'2' {
             #view the pfx
             openssl pkcs12 -in .\FullCertChain.pfx -nodes
+            Show-Menu
 		}
 		'3' {
 
