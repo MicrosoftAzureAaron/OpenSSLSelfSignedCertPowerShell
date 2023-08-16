@@ -1,7 +1,3 @@
-#todo
-#add conf file for SANs in selfsigned cert
-#add menu system 
-
 # Check if OpenSSL is installed
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     # Download and install OpenSSL
@@ -10,33 +6,162 @@ if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 
-# Ask user for parameters
-$certName = Read-Host "Enter Site/Leaf/Server certificate name, example.com"
-$RootCertPassword = Read-Host "Enter Root Private Key password"
-$RootCertPassword = "pass:" + $RootCertPassword
-$LeafCertPassword = Read-Host "Enter Leaf Private Key password"
-$LeafCertPassword = "pass:" + $LeafCertPassword
-$certDays = 366
-#$LeafCertPassword = $RootCertPassword = "1234"
+############# Ask user for parameters
+#todo:
+# add variable checking
 
-# Create Root Certificate and Root Key
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
-#openssl req -x509 -newkey rsa:2048 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
+function Get-Parameters {
+    $CN = Read-Host "Enter Root certificate name, [Root.com]"
+    
+    $countryName = Read-Host "Enter the Country, [US]"
+    
+    $stateOrProvinceName = Read-Host "Enter the State or Providence, [TX]"
+    
+    $organizationName = Read-Host "Enter the Orginization Name, [Microsoft]"
 
-#No SAN for self signed 
-$san = "subjectAltName = DNS:"+$certName+",DNS:*"+$certname
-$cn = "/CN="+$certName
+    $RootCertPassword = Read-Host "Enter Root Private Key password"
+    $RootCertPassword = "pass:" + $RootCertPassword
 
-# Create the leaf certifite and key
-openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
-#openssl req -new -newkey rsa:2048 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
-openssl x509 -req -in SelfSignedLeaf.csr -CA SelfSignedRoot.crt -CAkey SelfSignedRoot.key -CAcreateserial -out SelfSignedLeaf.crt -days $certDays -passin $RootCertPassword
+    $LeafCertPassword = Read-Host "Enter Leaf Private Key password"
+    $LeafCertPassword = "pass:" + $LeafCertPassword
 
-# Export server certificate and key
-openssl pkcs12 -export -out SelfSignedLeaf.pfx -inkey SelfSignedLeaf.key -in SelfSignedLeaf.crt -certfile SelfSignedRoot.crt -passout $LeafCertPassword -passin $LeafCertPassword
+    $CertDays = Read-Host "Enter days the certificate is valid for [365]"
 
-#view the pfx
-openssl pkcs12 -in .\SelfSignedLeaf.pfx -nodes 
+    #create root.cnf
+    $FileName = "Root.cnf"
+    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FileName
 
-#create .cer from .crt root certificate 
-Copy-Item -path .\SelfSignedRoot.crt -Destination .\SelfSignedRoot.cer
+    $CN = Read-Host "Enter Site/Leaf/Server certificate name, leaf.com"
+    #create leaf.cnf
+    $FileName = "leaf.cnf"
+    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FileName
+
+    #create v3.txt\
+    $SAN = Read-Host "Enter the SANs for the certificate, [bing.com,*bing.com,www.bing.com]"
+    CreateV3 -s1 $SAN
+    CreateCerts -CD $CertDays
+}
+
+############# create certificate
+function CreateCerts {
+    param (
+        [int]$CD
+    )
+    #creates Root.key private certificate (private key)
+    openssl ecparam -out Root.key -name prime256v1 -genkey
+
+    #creates Root.csr certificate signing request (CSR) with the Root.key private certificate
+    openssl req -new -sha256 -key Root.key -out Root.csr -config Root.cnf
+
+    #creates Root.cer certificate from Root.csr, Root.key, Root.cnf
+    openssl x509 -req -sha256 -days $CD -extfile Root.cnf -extensions v3_ca -in Root.csr -signkey Root.key -out Root.cer
+
+    #create Leaf.key private certificate (private key)
+    openssl ecparam -out Leaf.key -name prime256v1 -genkey
+
+    #create Leaf.csr certificate signing request (CSR) with the Leaf.key private certificate
+    openssl req -new -sha256 -key Leaf.key -out Leaf.csr -config Leaf.cnf
+
+    #create Leaf.cer certificate from Root.cer Root.key, and create a .srl file (serial file)
+    openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile v3.txt
+
+    #export the Leaf as a PFX with the Key and bundled Root.cer and Leaf.cer
+    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer
+}
+
+
+############# modify the CNF files
+function CreateCNF {
+    param (
+        [string]$s1,
+        [string]$s2,
+        [string]$s3,
+        [string]$s4,
+        [string]$FN
+    )
+    #$PSScriptRoot is a built-in variable that represents the directory where the script is located.
+    #create a CNF from template cnf file
+    $filePath = Join-Path -Path $PSScriptRoot -ChildPath "cnftemplate.cnf"
+    $content = Get-Content -Path $filePath
+
+    # Modify the content as needed
+    $modifiedContent = $content -replace "s1", $s1
+    $modifiedContent = $modifiedContent -replace "s2", $s2
+    $modifiedContent = $modifiedContent -replace "s3", $s3
+    $modifiedContent = $modifiedContent -replace "s4", $s4
+    #write-host "filepath "$filepath
+    #write-host "filename "$FN
+    $filePath = Join-Path -Path $PSScriptRoot -ChildPath $FN
+    $modifiedContent | Set-Content -Path $filePath
+}
+
+function CreateV3 {
+    param (
+        [string]$s1
+    )
+    # Specify the file path
+    $filePath = Join-Path -Path $PSScriptRoot -ChildPath "v3.txt"
+
+    # Content to be written to the file
+    $content = "subjectAltName = DNS:"+$s1
+    $content | Set-Content -Path $filePath
+
+    #add the last line
+    Add-Content -Path $filePath -Value "extendedKeyUsage = serverAuth, clientAuth"
+}
+
+#menu here
+function Show-Menu {
+	#Clear-Host
+	Write-Host "================ Self Signed Certificate ================"
+	Write-Host "1: Press '1' Create Certificate "
+	Write-Host "2: Press '2' View Local PFX"
+	#Write-Host "3: Press '3' "
+	#Write-Host "4: Press '4' "
+	#Write-Host "5: Press '5' "
+	#Write-Host "6: Press '6' "
+	#Write-Host "9: Press '9' "
+	#Write-Host "0: Press '0' "
+	Write-Host "Q: Press 'Q' to quit."
+}
+
+do {
+	Show-Menu
+    $S = Read-Host "Please make a selection"
+
+    switch ($S) {
+		'1' {
+            #get the user input
+            Get-Parameters
+            CreateCerts
+            Show-Menu
+		}
+		'2' {
+            #view the pfx
+            openssl pkcs12 -in .\FullCertChain.pfx -nodes
+		}
+		'3' {
+
+		}
+		'4' {
+
+		}
+		'5' {
+
+		}
+		'6' {
+
+		}
+		'9' {
+
+		}
+		'q' {
+			try {	
+			}
+			catch {
+				Write-Host "Error"
+			}
+		}
+	}
+}
+until ($S -eq 'q')
