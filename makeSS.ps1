@@ -1,7 +1,7 @@
 # Check if OpenSSL is installed
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     # Download and install OpenSSL
-    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_1.exe" -OutFile "C:\OpenSSL.exe"
+    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\OpenSSL.exe"
     Start-Process -FilePath "C:\OpenSSL.exe" -ArgumentList "/SILENT" -Wait
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
@@ -17,6 +17,7 @@ $certDays = 366
 
 # Create Root Certificate and Root Key
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
+#openssl req -x509 -newkey rsa:2048 -days $certDays -nodes -keyout SelfSignedRoot.key -out SelfSignedRoot.crt -subj "/CN=SelfSignedRoot.com" -addext "subjectAltName = DNS:SelfSignedRoot.com,DNS:*SelfSignedRoot.com" -passout $RootCertPassword
 
 #No SAN for self signed 
 $san = "subjectAltName = DNS:"+$certName+",DNS:*"+$certname
@@ -24,6 +25,7 @@ $cn = "/CN="+$certName
 
 # Create the leaf certifite and key
 openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
+#openssl req -new -newkey rsa:2048 -keyout SelfSignedLeaf.key -out SelfSignedLeaf.csr -subj $cn -addext $san -passout $LeafCertPassword
 openssl x509 -req -in SelfSignedLeaf.csr -CA SelfSignedRoot.crt -CAkey SelfSignedRoot.key -CAcreateserial -out SelfSignedLeaf.crt -days $certDays -passin $RootCertPassword
 
 # Export server certificate and key

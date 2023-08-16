@@ -6,3 +6,4 @@ SelfSignedRoot.cer
 SelfSignedRoot.crt
 SelfSignedRoot.key
 SelfSignedRoot.srl
+makeSS.ps1.bak
