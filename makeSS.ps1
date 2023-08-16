@@ -166,6 +166,7 @@ do {
 		'2' {
             #view the pfx
             openssl pkcs12 -in .\FullCertChain.pfx -nodes
+            Pause
             Show-Menu
 		}
 		'3' {
