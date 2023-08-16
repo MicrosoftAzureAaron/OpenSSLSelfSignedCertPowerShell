@@ -22,3 +22,6 @@ Leaf.csr
 Root.cer
 Root.srl
 Leaf.cer
+cnftemplate.cnf
+Leaf.cnf+
+Root.cnf+

@@ -6,8 +6,15 @@ if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 
-#todo:
-# add variable checking
+function CreateCNFTemplate {
+    # Specify the file path
+    $filePath = Join-Path -Path $PSScriptRoot -ChildPath "cnftemplate.cnf"
+    if (Test-Path $filePath -PathType Leaf) {
+       #Write-Host "The CNF template file exists."
+   } else { #manually create template
+       Add-Content -Path $filePath -Value "[ req ] `ndistinguished_name = req_distinguished_name `nextensions = v3_ca `nreq_extensions = v3_ca `nprompt = no `n[ v3_ca ] `nbasicConstraints = CA:TRUE `n[ req_distinguished_name ] `ncountryName = s1 `nstateOrProvinceName = s2 `norganizationName = s3 `ncommonName = s4"
+   }
+}
 
 ############# create certificate
 function CreateCerts {
@@ -56,22 +63,32 @@ function CreateCerts {
     CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CommonName -FN $FN
 
     #create v3.txt\
-    $SAN = Read-Host "Enter the SANs for the certificate, [*Leaf.com,*.Leaf.com,www.Leaf.com]"
-    if($SAN -match "^\s*$") {$SAN = "*"+$CommonName }
-    
-    # Split the string into an array using commas as the delimiter
-    $elements = $SAN -split ','
+    $SAN = Read-Host "Enter the SANs for the certificate, []"
+    $SAN = $SAN.ToLower()
 
-    # Check if there are more than one element and the string doesn't end with a comma
-    if ($elements.Count -gt 1 -and $SAN -notlike '*,') {
-        Write-Host "SAN = Comman Name" $SAN
-        #add 'DNS:' to the list
+    if($SAN -match "^\s*$") { #no SAN entered :(
+        $SAN="DNS:" + $CommonName.ToLower()
+    } #could ignore SANs if not entered
+    else {
+         #add 'DNS:' to the list
         $SAN = ($SAN -split ',') -join ',DNS:'
         $SAN = 'DNS:' + $SAN  # Add 'DNS:' to the beginning
-        Write-Host $SAN
-    } else {
-        Write-Host $SAN 
-    }    
+        #Write-Host "Multiple SANS "
+    }
+    
+    $s0 = "DNS:" + $CommonName.ToLower()
+    # Check if the common name is in the SAN list
+    if ($SAN.contains($s0)) {
+        
+    }  
+    else {
+        # Add the common name to the end of the SAN list
+        $SAN = $SAN +",DNS:" + $CommonName.ToLower()
+        Write-Host "`nHad to add the common name to the SAN list`n" #$elements
+    }
+
+    Write-Host "Subjnect Alternative Name List:`n"$SAN"`n"
+    
     #create the V3 extenstion file with SANS
     CreateV3 -s1 $SAN
 
@@ -83,9 +100,8 @@ function CreateCerts {
     openssl x509 -req -in Leaf.csr -CA Root.cer -CAkey Root.key -CAcreateserial -out Leaf.cer -days 365 -sha256 -extfile $FN -passin $LeafCertPassword
 
     #export the Leaf as a PFX with the Key and bundled Root.cer and Leaf.cer
-    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer -passin $LeafCertPassword
+    openssl pkcs12 -export -out FullCertChain.pfx -inkey Leaf.key -in Leaf.cer
 }
-
 
 ############# modify the CNF files
 function CreateCNF {
@@ -96,6 +112,7 @@ function CreateCNF {
         [string]$s4,
         [string]$FN
     )
+    CreateCNFTemplate
     #$PSScriptRoot is a built-in variable that represents the directory where the script is located.
     #create a CNF from template cnf file
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath "cnftemplate.cnf"
@@ -109,7 +126,7 @@ function CreateCNF {
     #Write-Host "filepath "$filepath
     #Write-Host "filename "$FN
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath $FN
-    $modifiedContent | Set-Content -Path $filePath+
+    $modifiedContent | Set-Content -Path $filePath
 
     #remove lines 3 and 4 from the template for the leaf CNF
     if ($FN -eq "Leaf.cnf") {
@@ -138,6 +155,7 @@ function CreateV3 {
     Add-Content -Path $filePath -Value "extendedKeyUsage = serverAuth, clientAuth"
 }
 
+
 #menu here
 function Show-Menu {
 	Clear-Host
@@ -161,13 +179,12 @@ do {
 		'1' {
             #get the user input
             CreateCerts
-            Show-Menu
+            Pause
 		}
 		'2' {
             #view the pfx
             openssl pkcs12 -in .\FullCertChain.pfx -nodes
             Pause
-            Show-Menu
 		}
 		'3' {
 
