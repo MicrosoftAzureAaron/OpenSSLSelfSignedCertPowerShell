@@ -10,7 +10,7 @@ function CreateCNFTemplate {
     # Specify the file path
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath "cnftemplate.cnf"
     if (Test-Path $filePath -PathType Leaf) {
-       Write-Host "The CNF template file exists."
+       #Write-Host "The CNF template file exists."
    } else { #manually create template
        Add-Content -Path $filePath -Value "[ req ] `ndistinguished_name = req_distinguished_name `nextensions = v3_ca `nreq_extensions = v3_ca `nprompt = no `n[ v3_ca ] `nbasicConstraints = CA:TRUE `n[ req_distinguished_name ] `ncountryName = s1 `nstateOrProvinceName = s2 `norganizationName = s3 `ncommonName = s4"
    }
@@ -64,31 +64,31 @@ function CreateCerts {
 
     #create v3.txt\
     $SAN = Read-Host "Enter the SANs for the certificate, []"
-    if($SAN -match "^\s*$") {} #could ignore SANs if not entered
-    
-    # Split the string into an array using commas as the delimiter
-    $elements = $SAN -split ','
+    $SAN = $SAN.ToLower()
 
-    # Check if there are more than one element and the string doesn't end with a comma
-    if ($elements.Count -gt 1 -and $SAN -notlike '*,') {
-        Write-Host "SAN = Comman Name" $SAN
-        #add 'DNS:' to the list
+    if($SAN -match "^\s*$") { #no SAN entered :(
+        $SAN="DNS:" + $CommonName.ToLower()
+    } #could ignore SANs if not entered
+    else {
+         #add 'DNS:' to the list
         $SAN = ($SAN -split ',') -join ',DNS:'
         $SAN = 'DNS:' + $SAN  # Add 'DNS:' to the beginning
-        #Write-Host $SAN
-    } else {
-        # Check if the desired string is in the array
-        if ($elements -notcontains $CommonName) {
-            # Add the desired string to the beginning of the array
-            $elements = @("DNS:" + $CommonName)
-        }
+        #Write-Host "Multiple SANS "
     }
     
-    # Convert the array back to a comma-separated string
-    $SAN = $elements -join ','
-    
-    Write-Host "Had to add the common name to the SAN list" $SAN
+    $s0 = "DNS:" + $CommonName.ToLower()
+    # Check if the common name is in the SAN list
+    if ($SAN.contains($s0)) {
+        
+    }  
+    else {
+        # Add the common name to the end of the SAN list
+        $SAN = $SAN +",DNS:" + $CommonName.ToLower()
+        Write-Host "`nHad to add the common name to the SAN list`n" #$elements
+    }
 
+    Write-Host "Subjnect Alternative Name List:`n"$SAN"`n"
+    
     #create the V3 extenstion file with SANS
     CreateV3 -s1 $SAN
 
@@ -179,13 +179,12 @@ do {
 		'1' {
             #get the user input
             CreateCerts
-            Show-Menu
+            Pause
 		}
 		'2' {
             #view the pfx
             openssl pkcs12 -in .\FullCertChain.pfx -nodes
             Pause
-            Show-Menu
 		}
 		'3' {
 
