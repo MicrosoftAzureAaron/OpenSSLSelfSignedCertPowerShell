@@ -16,3 +16,9 @@ Root.key
 .gitignore
 root.cnf
 v3.txt
+FullCertChain.pfx
+.gitignore
+Leaf.csr
+Root.cer
+Root.srl
+Leaf.cer

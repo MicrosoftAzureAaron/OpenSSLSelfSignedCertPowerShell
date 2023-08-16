@@ -12,12 +12,16 @@ if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
 ############# create certificate
 function CreateCerts {
     $CN = Read-Host "Enter Root certificate name, [Root.com]"
-    
+    if($CN -match "^\s*$") {$CN = "Root.com"}
+
     $countryName = Read-Host "Enter the Country, [US]"
-    
+    if($countryName -match "^\s*$") {$countryName = "US" }
+
     $stateOrProvinceName = Read-Host "Enter the State or Providence, [TX]"
-    
-    $organizationName = Read-Host "Enter the Orginization Name, [Microsoft]"
+    if($stateOrProvinceName -match "^\s*$") {$stateOrProvinceName = "TX"}
+
+    $organizationName = Read-Host "Enter the Orginization Name, [SelfSigned]"
+    if($organizationName -match "^\s*$") {$organizationName = "SelfSigned"}
 
     $RootCertPassword = Read-Host "Enter Root Private Key password"
     $RootCertPassword = "pass:" + $RootCertPassword
@@ -25,20 +29,11 @@ function CreateCerts {
     $LeafCertPassword = Read-Host "Enter Leaf Private Key password"
     $LeafCertPassword = "pass:" + $LeafCertPassword
 
-    $CertDays = Read-Host "Enter days the certificate is valid for [365]"
+    #$CertDays = Read-Host "Enter days the certificate is valid for [365]"
 
     #create root.cnf
-    $FileName = "Root.cnf"
-    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FileName
-
-    $CN = Read-Host "Enter Site/Leaf/Server certificate name, leaf.com"
-    #create leaf.cnf
-    $FileName = "Leaf.cnf"
-    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FileName
-
-    #create v3.txt\
-    $SAN = Read-Host "Enter the SANs for the certificate, [bing.com,*bing.com,www.bing.com]"
-    CreateV3 -s1 $SAN
+    $FN = "Root.cnf"
+    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FN
 
     #creates Root.key private certificate (private key)
     openssl ecparam -out Root.key -name prime256v1 -genkey
@@ -47,11 +42,20 @@ function CreateCerts {
     openssl req -new -sha256 -key Root.key -out Root.csr -config Root.cnf
 
     #creates Root.cer certificate from Root.csr, Root.key, Root.cnf
-    openssl x509 -req -sha256 -days $CD -extfile Root.cnf -extensions v3_ca -in Root.csr -signkey Root.key -out Root.cer
+    openssl x509 -req -sha256 -days 365 -in Root.csr -signkey Root.key -out Root.cer -extfile $FN -extensions v3_ca
     Pause
 
     #create Leaf.key private certificate (private key)
     openssl ecparam -out Leaf.key -name prime256v1 -genkey
+
+    $CN = Read-Host "Enter Site/Leaf/Server certificate name, leaf.com"
+    #create leaf.cnf
+    $FN = "Leaf.cnf"
+    CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CN -FN $FN
+
+    #create v3.txt\
+    $SAN = Read-Host "Enter the SANs for the certificate, [bing.com,*bing.com,www.bing.com]"
+    CreateV3 -s1 $SAN
 
     #create Leaf.csr certificate signing request (CSR) with the Leaf.key private certificate
     openssl req -new -sha256 -key Leaf.key -out Leaf.csr -config Leaf.cnf
@@ -88,6 +92,15 @@ function CreateCNF {
     #write-host "filename "$FN
     $filePath = Join-Path -Path $PSScriptRoot -ChildPath $FN
     $modifiedContent | Set-Content -Path $filePath
+    if ($FN -eq "Leaf.cnf") {
+        $lines = Get-Content -Path $filePath
+
+        # Remove lines at indices 2 and 3 (0-based indices, so lines 3 and 4)
+        $lines = $lines | Where-Object { $_ -notin @($lines[2], $lines[3]) }
+
+        # Write the modified content back to the file
+        $lines | Set-Content -Path $filePath
+    }
 }
 
 function CreateV3 {
