@@ -1,8 +1,9 @@
 # Check if OpenSSL is installed
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
+    Write-Host "Installing OpenSSL"
     # Download and install OpenSSL
-    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\temp\OpenSSL.exe"
-    Start-Process -FilePath "C:\temp\OpenSSL.exe" -ArgumentList "/SILENT" -Wait
+    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "OpenSSL.exe"
+    Start-Process -FilePath ".\OpenSSL.exe" -Wait
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 
@@ -158,15 +159,14 @@ function CreateV3 {
 function Get-OpenSSL {
     try {	
         # Download and install OpenSSL
-        Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\temp\OpenSSL.exe"
-        Start-Process -FilePath "C:\temp\OpenSSL.exe" -Wait
+        Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "OpenSSL.exe"
+        Start-Process -FilePath ".\OpenSSL.exe" -Wait
         $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
     }
     catch {
-        Write-Host "Check which link the script is trying to downloa. Attempting to open the website for you."
+        Write-Host "Check which link the script is trying to download. Attempting to open the website for you."
         start https://slproweb.com/products/Win32OpenSSL.html
     }
-        
 }
 
 #menu here
