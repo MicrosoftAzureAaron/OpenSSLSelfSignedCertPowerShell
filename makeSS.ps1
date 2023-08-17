@@ -155,6 +155,19 @@ function CreateV3 {
     Add-Content -Path $filePath -Value "extendedKeyUsage = serverAuth, clientAuth"
 }
 
+function Get-OpenSSL {
+    try {	
+        # Download and install OpenSSL
+        Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\temp\OpenSSL.exe"
+        Start-Process -FilePath "C:\temp\OpenSSL.exe" -Wait
+        $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
+    }
+    catch {
+        Write-Host "Check which link the script is trying to downloa. Attempting to open the website for you."
+        start https://slproweb.com/products/Win32OpenSSL.html
+    }
+        
+}
 
 #menu here
 function Show-Menu {
@@ -187,10 +200,11 @@ do {
             Pause
 		}
 		'3' {
-
+            Get-OpenSSL
+            Pause
 		}
 		'4' {
-
+            start https://slproweb.com/products/Win32OpenSSL.html
 		}
 		'5' {
 
