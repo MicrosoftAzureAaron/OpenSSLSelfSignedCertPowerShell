@@ -1,8 +1,8 @@
 # Check if OpenSSL is installed
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     # Download and install OpenSSL
-    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\OpenSSL.exe"
-    Start-Process -FilePath "C:\OpenSSL.exe" -ArgumentList "/SILENT" -Wait
+    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\temp\OpenSSL.exe"
+    Start-Process -FilePath "C:\temp\OpenSSL.exe" -ArgumentList "/SILENT" -Wait
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 
@@ -162,8 +162,8 @@ function Show-Menu {
 	Write-Host "================ Self Signed Certificate ================"
 	Write-Host "1: Press '1' Create Certificate "
 	Write-Host "2: Press '2' View Local PFX"
-	#Write-Host "3: Press '3' "
-	#Write-Host "4: Press '4' "
+	Write-Host "3: Press '3' Install OpenSSL"
+	Write-Host "4: Press '4' Open the SLBWebsite for OpenSSL"
 	#Write-Host "5: Press '5' "
 	#Write-Host "6: Press '6' "
 	#Write-Host "9: Press '9' "
