@@ -13,3 +13,8 @@ run MakeSS.ps1
    9. FullCertChain.pfx a bundled PFX with private leaf key certificate, public root certificate, public leaf certificate
    10. Root.SRL root certificate serial
    11. v3.txt OpenSSL extension file
+
+todo:
+1. install certificates on local machine menu option
+2. add non openssl version utilizing native PS commands for certificate creation
+   
