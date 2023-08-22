@@ -1,9 +1,14 @@
 # Check if OpenSSL is installed
-if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
-    Write-Host "Installing OpenSSL"
-    # Download and install OpenSSL
-    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
-    Start-Process -FilePath "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe" -Wait
+try {
+    $opensslVersion = openssl version
+    Write-Host "OpenSSL version is $opensslVersion"
+}
+catch {
+    Write-Host "OpenSSL is not installed. Installing OpenSSL SLProWeb.com"
+    $url = "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe"
+    $output = "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
+    Invoke-WebRequest -Uri $url -OutFile $output
+    Start-Process -FilePath $output -ArgumentList "/silent" -Wait
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 
@@ -54,6 +59,7 @@ function CreateCerts {
 
     #create Leaf.key private certificate (private key)
     openssl ecparam -out Leaf.key -name prime256v1 -genkey
+
     $CommonName = ""
     $CommonName = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
     if ($CommonName -match "^\s*$") { $CommonName = "Leaf.com" }
@@ -65,7 +71,7 @@ function CreateCerts {
     $FN = "Leaf.cnf"
     CreateCNF -s1 $countryName -s2 $stateOrProvinceName -s3 $organizationName -s4 $CommonName -FN $FN
 
-    #create v3.txt\
+    #ask for SANs, add the CN/general name to SAN list
     $SAN = Read-Host "Enter the SANs for the certificate, []"
     $SAN = $SAN.ToLower()
 
@@ -144,6 +150,89 @@ function CreateCNF {
     }
 }
 
+function PSNativeCert {
+    param (
+        OptionalParameters
+    )
+    $CommonName = Read-Host "Enter Root certificate name, [Root.com]"
+    if ($CommonName -match "^\s*$") { $CommonName = "Root.com" }
+
+    # $countryName = Read-Host "Enter the Country, [US]"
+    # if ($countryName -match "^\s*$") { $countryName = "US" }
+
+    # $stateOrProvinceName = Read-Host "Enter the State or Providence, [TX]"
+    # if ($stateOrProvinceName -match "^\s*$") { $stateOrProvinceName = "TX" }
+
+    # $organizationName = Read-Host "Enter the Orginization Name, [SelfSigned]"
+    # if ($organizationName -match "^\s*$") { $organizationName = "SelfSigned" }
+
+    # $RootCertPassword = Read-Host "Enter Root Private Key password"
+    # $RootCertPassword = "pass:" + $RootCertPassword
+
+    # $CertDays = Read-Host "Enter days the certificate is valid for [365]"
+    #if ($CertDays -match "^\s*$") { $CertDays = 365 }
+
+    $params = @{
+        Type    = 'Custom'
+        Subject = 'CN='$CommonName
+        KeySpec           = 'Signature'
+        KeyExportPolicy   = 'Exportable'
+        KeyUsage          = 'CertSign'
+        KeyUsageProperty  = 'Sign'
+        KeyLength         = 2048
+        HashAlgorithm     = 'sha256'
+        NotAfter          = (Get-Date).AddMonths(24)
+        CertStoreLocation = 'Cert:\CurrentUser\My'
+    }
+    $cert = New-SelfSignedCertificate @params
+
+    $CommonName = ""
+    $CommonName = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
+    if ($CommonName -match "^\s*$") { $CommonName = "Leaf.com" }
+    #ask for SANs, add the CN/general name to SAN list
+    $SAN = Read-Host "Enter the SANs for the certificate, []"
+    $SAN = $SAN.ToLower()
+
+    if ($SAN -match "^\s*$") {
+        #no SAN entered :(
+        $SAN = "DNS:" + $CommonName.ToLower()
+    } #could ignore SANs if not entered
+    else {
+        #add 'DNS:' to the list
+        $SAN = ($SAN -split ',') -join ',DNS:'
+        $SAN = 'DNS:' + $SAN  # Add 'DNS:' to the beginning
+        #Write-Host "Multiple SANS "
+    }
+    
+    $s0 = "DNS:" + $CommonName.ToLower()
+    # Check if the common name is in the SAN list
+    if ($SAN.contains($s0)) {
+        
+    }  
+    else {
+        # Add the common name to the end of the SAN list
+        $SAN = $SAN + ",DNS:" + $CommonName.ToLower()
+        Write-Host "`nHad to add the common name to the SAN list`n" #$elements
+    }
+
+    Write-Host "Subjnect Alternative Name List:`n"$SAN"`n"
+    $params = @{
+        Type    = 'Custom'
+        Subject = 'CN='$CommonName
+        DnsName           = $SAN
+        KeySpec           = 'Signature'
+        KeyExportPolicy   = 'Exportable'
+        KeyLength         = 2048
+        HashAlgorithm     = 'sha256'
+        NotAfter          = (Get-Date).AddMonths(18)
+        CertStoreLocation = 'Cert:\CurrentUser\My'
+        Signer            = $cert
+        TextExtension     = @(
+            '2.5.29.37={text}1.3.6.1.5.5.7.3.2')
+    }
+    New-SelfSignedCertificate @params
+}
+
 function CreateV3 {
     param (
         [string]$s1
@@ -176,12 +265,14 @@ function Get-OpenSSL {
 function Show-Menu {
     Clear-Host
     Write-Host "================ Self Signed Certificate ================"
-    Write-Host "1: Press '1' Create Certificate "
+    Write-Host "1: Press '1' Create Certificate with OpenSSL"
     Write-Host "2: Press '2' View Local PFX"
     Write-Host "3: Press '3' Install OpenSSL"
     Write-Host "4: Press '4' Open the SLBWebsite for OpenSSL"
-    #Write-Host "5: Press '5' "
-    #Write-Host "6: Press '6' "
+    Write-Host "5: Press '5' Create a Certificate with PowerShell Native Commands"
+    Write-Host "6: Press '6' Install the OpenSSL PFX in local machine"
+    #Write-Host "7: Press '7' "
+    #Write-Host "8: Press '8' "
     #Write-Host "9: Press '9' "
     #Write-Host "0: Press '0' "
     Write-Host "Q: Press 'Q' to quit."
@@ -210,7 +301,8 @@ do {
             Start-Process https://slproweb.com/products/Win32OpenSSL.html
         }
         '5' {
-
+            PSNativeCert
+            Pause
         }
         '6' {
 
