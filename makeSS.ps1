@@ -153,7 +153,7 @@ function CreateCNF {
 
 function PSNativeCert {
     $CommonName = Read-Host "Enter Root certificate name, [Root.com]"
-    if ($CommonName -match "^\s*$") { $CommonName = "CN=Root.com" }
+    if ($CommonName -match "^\s*$") { $CommonName = "Root.com" }
     $CommonName = 'CN=' + $CommonName
     # $countryName = Read-Host "Enter the Country, [US]"
     # if ($countryName -match "^\s*$") { $countryName = "US" }
@@ -187,7 +187,7 @@ function PSNativeCert {
 
     $CommonName = ""
     $CommonName = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
-    if ($CommonName -match "^\s*$") { $CommonName = "CN=Leaf.com" }
+    if ($CommonName -match "^\s*$") { $CommonName = "Leaf.com" }
     $CommonName = 'CN=' + $CommonName
 
     #ask for SANs, add the CN/general name to SAN list
