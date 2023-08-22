@@ -153,8 +153,8 @@ function CreateCNF {
 
 function PSNativeCert {
     $CommonName = Read-Host "Enter Root certificate name, [Root.com]"
-    if ($CommonName -match "^\s*$") { $CommonName = "Root.com" }
-
+    if ($CommonName -match "^\s*$") { $CommonName = "CN=Root.com" }
+    $CommonName = 'CN=' + $CommonName
     # $countryName = Read-Host "Enter the Country, [US]"
     # if ($countryName -match "^\s*$") { $countryName = "US" }
 
@@ -170,9 +170,9 @@ function PSNativeCert {
     # $CertDays = Read-Host "Enter days the certificate is valid for [365]"
     #if ($CertDays -match "^\s*$") { $CertDays = 365 }
 
-    $params = @{
-        Type    = 'Custom'
-        Subject = 'CN='$CommonName
+    $par = [PSCustomObject]@{
+        Type              = 'Custom'
+        Subject           = $CommonName
         KeySpec           = 'Signature'
         KeyExportPolicy   = 'Exportable'
         KeyUsage          = 'CertSign'
@@ -182,11 +182,14 @@ function PSNativeCert {
         NotAfter          = (Get-Date).AddMonths(24)
         CertStoreLocation = 'Cert:\CurrentUser\My'
     }
-    $cert = New-SelfSignedCertificate @params
+
+    $cert = New-SelfSignedCertificate @par
 
     $CommonName = ""
     $CommonName = Read-Host "Enter Site/Leaf/Server certificate name, Leaf.com"
-    if ($CommonName -match "^\s*$") { $CommonName = "Leaf.com" }
+    if ($CommonName -match "^\s*$") { $CommonName = "CN=Leaf.com" }
+    $CommonName = 'CN=' + $CommonName
+
     #ask for SANs, add the CN/general name to SAN list
     $SAN = Read-Host "Enter the SANs for the certificate, []"
     $SAN = $SAN.ToLower()
@@ -214,9 +217,9 @@ function PSNativeCert {
     }
 
     Write-Host "Subjnect Alternative Name List:`n"$SAN"`n"
-    $params = @{
-        Type    = 'Custom'
-        Subject = 'CN='$CommonName
+    $par = [PSCustomObject]@{
+        Type              = 'Custom'
+        Subject           = $CommonName
         DnsName           = $SAN
         KeySpec           = 'Signature'
         KeyExportPolicy   = 'Exportable'
@@ -228,7 +231,7 @@ function PSNativeCert {
         TextExtension     = @(
             '2.5.29.37={text}1.3.6.1.5.5.7.3.2')
     }
-    New-SelfSignedCertificate @params
+    New-SelfSignedCertificate @par
 }
 
 function InstallCert {
