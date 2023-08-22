@@ -152,9 +152,6 @@ function CreateCNF {
 }
 
 function PSNativeCert {
-    param (
-        OptionalParameters
-    )
     $CommonName = Read-Host "Enter Root certificate name, [Root.com]"
     if ($CommonName -match "^\s*$") { $CommonName = "Root.com" }
 
@@ -235,9 +232,6 @@ function PSNativeCert {
 }
 
 function InstallCert {
-    param (
-        OptionalParameters
-    )
     # Specify the path to the PFX file and the password
     $pfxPath = "C:\Path\to\YourCertificate.pfx"
     $pfxPassword = ConvertTo-SecureString -String "YourPfxPassword" -Force -AsPlainText
