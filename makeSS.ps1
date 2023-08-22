@@ -321,6 +321,7 @@ do {
         }
         '7' {
             setx /M PATH "$env:Path;C:\Program Files\OpenSSL-Win64\bin"
+            Pause
         }
         'q' {
             try {	
