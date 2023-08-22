@@ -2,6 +2,7 @@
 try {
     $opensslVersion = openssl version
     Write-Host "OpenSSL version is $opensslVersion"
+    $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 catch {
     Write-Host "OpenSSL is not installed. Installing OpenSSL SLProWeb.com"
@@ -233,6 +234,19 @@ function PSNativeCert {
     New-SelfSignedCertificate @params
 }
 
+function InstallCert {
+    param (
+        OptionalParameters
+    )
+    # Specify the path to the PFX file and the password
+    $pfxPath = "C:\Path\to\YourCertificate.pfx"
+    $pfxPassword = ConvertTo-SecureString -String "YourPfxPassword" -Force -AsPlainText
+
+    # Import the PFX certificate into the LocalMachine certificate store
+    Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\LocalMachine\My -Password $pfxPassword
+
+}
+
 function CreateV3 {
     param (
         [string]$s1
@@ -265,13 +279,13 @@ function Get-OpenSSL {
 function Show-Menu {
     Clear-Host
     Write-Host "================ Self Signed Certificate ================"
-    Write-Host "1: Press '1' Create Certificate with OpenSSL"
-    Write-Host "2: Press '2' View Local PFX"
+    Write-Host "1: Press '1' Create certificate with OpenSSL"
+    Write-Host "2: Press '2' View OpenSSL PFX"
     Write-Host "3: Press '3' Install OpenSSL"
     Write-Host "4: Press '4' Open the SLBWebsite for OpenSSL"
-    Write-Host "5: Press '5' Create a Certificate with PowerShell Native Commands"
+    Write-Host "5: Press '5' Create and Install a certificate with PowerShell Commands"
     Write-Host "6: Press '6' Install the OpenSSL PFX in local machine"
-    #Write-Host "7: Press '7' "
+    Write-Host "7: Press '7' Requires ADMIN: Set OpenSSL enviroment path permently"
     #Write-Host "8: Press '8' "
     #Write-Host "9: Press '9' "
     #Write-Host "0: Press '0' "
@@ -305,10 +319,11 @@ do {
             Pause
         }
         '6' {
-
+            InstallCert
+            Pause
         }
-        '9' {
-
+        '7' {
+            setx /M PATH "$env:Path;C:\Program Files\OpenSSL-Win64\bin"
         }
         'q' {
             try {	
