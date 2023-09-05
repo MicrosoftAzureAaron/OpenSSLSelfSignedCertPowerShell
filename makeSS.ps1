@@ -5,12 +5,12 @@ try {
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
 catch {
-    Write-Host "OpenSSL is not installed. Installing OpenSSL SLProWeb.com"
-    $url = "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe"
-    $output = "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
-    Invoke-WebRequest -Uri $url -OutFile $output
-    Start-Process -FilePath $output -ArgumentList "/silent" -Wait
-    $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
+    Write-Host "OpenSSL is not installed. Installing OpenSSL from SLProWeb.com"
+    $url = "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" #statically configured and breaks when updated
+    $output = "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe" #save to users download folder
+    Invoke-WebRequest -Uri $url -OutFile $output #download the file
+    Start-Process -FilePath $output -ArgumentList "/silent" -Wait #run installer, might need dotnet?
+    $env:Path += ";C:\Program Files\OpenSSL-Win64\bin" #set env path for this PS session #set-x for setting it permently
 }
 
 function CreateCNFTemplate {
