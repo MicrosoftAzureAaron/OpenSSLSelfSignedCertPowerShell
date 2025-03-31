@@ -2,7 +2,7 @@
 if (!(Get-Command openssl -ErrorAction SilentlyContinue)) {
     Write-Host "Installing OpenSSL"
     # Download and install OpenSSL
-    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
+    Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_4_1.exe" -OutFile "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
     Start-Process -FilePath "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe" -Wait
     $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
 }
@@ -162,7 +162,7 @@ function CreateV3 {
 function Get-OpenSSL {
     try {	
         # Download and install OpenSSL
-        Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_1_2.exe" -OutFile "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
+        Invoke-WebRequest -Uri "https://slproweb.com/download/Win64OpenSSL_Light-3_4_1.exe" -OutFile "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe"
         Start-Process -FilePath "C:\Users\$env:USERNAME\Downloads\OpenSSL.exe" -Wait
         $env:Path += ";C:\Program Files\OpenSSL-Win64\bin"
     }
